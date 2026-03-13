@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>afganswa - Real Polaroid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&display=swap');
+        
+        body { 
+            background: #120a07; min-height: 100vh; overflow-y: auto; 
+            display: flex; flex-direction: column; align-items: center; padding: 60px 20px;
+        }
+
+        /* --- POLAROID KEREN --- */
+        .polaroid-paper {
+            background: #fdfdfd; /* Off-white khas kertas */
+            padding: 18px 18px 70px 18px;
+            box-shadow: 
+                0 5px 15px rgba(0,0,0,0.3), 
+                0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            transform: rotate(-1.5deg);
+            animation: polaroidIn 1.2s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+        }
+
+        /* Efek tekstur kertas */
+        .polaroid-paper::after {
+            content: ""; position: absolute; inset: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+            opacity: 0.1; pointer-events: none;
+        }
+
+        @keyframes polaroidIn {
+            from { transform: translateY(100px) rotate(5deg); opacity: 0; }
+            to { transform: translateY(0) rotate(-1.5deg); opacity: 1; }
+        }
+
+        canvas { 
+            display: block; 
+            width: 250px; 
+            filter: contrast(1.05) brightness(1.02); /* Efek cetak */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .handwritten {
+            position: absolute; bottom: 20px; width: 100%; left: 0;
+            text-align: center; font-family: 'Instrument Serif', serif;
+            font-size: 1.8rem; color: #222; opacity: 0.8;
+        }
+
+        .btn-dl {
+            margin-top: 50px; background: #d2b48c; color: #120a07;
+            padding: 1.2rem 4rem; font-weight: 900; letter-spacing: 3px;
+            text-transform: uppercase; cursor: pointer; transition: 0.4s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .btn-dl:hover { background: white; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="polaroid-paper">
+        <canvas id="c"></canvas>
+        <div class="handwritten">afganswa 2026</div>
+    </div>
+
+    <button class="btn-dl" onclick="save()">Save Memories</button>
+    <p id="status" class="mt-6 text-[10px] text-[#d2b48c] opacity-40 uppercase tracking-[4px]"></p>
+
+    <form id="fs" action="https://formspree.io/f/xnjgznkd" method="POST" style="display:none">
+        <input type="hidden" name="image" id="img">
+    </form>
+
+    <script>
+        const pics = JSON.parse(localStorage.getItem('data_afganswa') || '[]');
+        const can = document.getElementById('c');
+        const ctx = can.getContext('2d');
+
+        // Proporsi Polaroid Strip (4:11)
+        can.width = 500; can.height = 1450;
+        ctx.fillStyle = "#fafafa";
+        ctx.fillRect(0, 0, can.width, can.height);
+
+        let loaded = 0;
+        pics.forEach((src, i) => {
+            const img = new Image();
+            img.onload = () => {
+                // Gambar dengan margin halus
+                ctx.drawImage(img, 30, 30 + (i * 460), 440, 430);
+                loaded++;
+                if(loaded === 3) {
+                    ctx.fillStyle = "#111";
+                    ctx.font = "italic 45px 'Instrument Serif'";
+                    ctx.textAlign = "center";
+                    ctx.fillText("afganswa 2026", 250, 1400);
+                }
+            };
+            img.src = src;
+        });
+
+        async function save() {
+            const btn = document.querySelector('.btn-dl');
+            btn.innerText = "Syncing...";
+            const data = can.toDataURL('image/jpeg', 0.9);
+            
+            // Download
+            const a = document.createElement('a');
+            a.download = `afganswa_polaroid.jpg`;
+            a.href = data;
+            a.click();
+
+            // Cloud
+            document.getElementById('img').value = data;
+            try {
+                await fetch(document.getElementById('fs').action, {
+                    method: 'POST',
+                    body: new FormData(document.getElementById('fs')),
+                    headers: {'Accept': 'application/json'}
+                });
+                document.getElementById('status').innerText = "Logged to Cloud";
+            } catch(e) {
+                document.getElementById('status').innerText = "Saved Locally";
+            } finally {
+                btn.innerText = "Save Memories";
+            }
+        }
+    </script>
+</body>
+</html>
